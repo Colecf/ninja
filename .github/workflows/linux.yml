@@ -142,6 +142,7 @@ jobs:
         apt install -y g++ python3
     - name: ${{ matrix.image }}
       run: |
+        c++ --version
         python3 configure.py --bootstrap
         ./ninja all
         ./ninja_test --gtest_filter=-SubprocessTest.SetWithLots

@@ -108,8 +108,8 @@ uint64_t MurmurHash64A(const void* key, size_t len) {
 }  // namespace
 
 // static
-uint64_t BuildLog::LogEntry::HashCommand(StringPiece command) {
-  return MurmurHash64A(command.str_, command.len_);
+uint64_t BuildLog::LogEntry::HashCommand(std::string_view command) {
+  return MurmurHash64A(command.data(), command.size());
 }
 
 BuildLog::LogEntry::LogEntry(const string& output)
@@ -349,8 +349,8 @@ LoadStatus BuildLog::Load(const string& path, string* err) {
       entry->command_hash = (uint64_t)strtoull(start, NULL, 16);
       *end = c;
     } else {
-      entry->command_hash = LogEntry::HashCommand(StringPiece(start,
-                                                              end - start));
+      entry->command_hash = LogEntry::HashCommand(std::string_view(start,
+                                                                   end - start));
     }
   }
   fclose(file);
@@ -405,7 +405,7 @@ bool BuildLog::Recompact(const string& path, const BuildLogUser& user,
     return false;
   }
 
-  vector<StringPiece> dead_outputs;
+  vector<std::string_view> dead_outputs;
   for (Entries::iterator i = entries_.begin(); i != entries_.end(); ++i) {
     if (user.IsPathDead(i->first)) {
       dead_outputs.push_back(i->first);
@@ -436,14 +436,16 @@ bool BuildLog::Recompact(const string& path, const BuildLogUser& user,
   return true;
 }
 
-bool BuildLog::Restat(const StringPiece path,
+bool BuildLog::Restat(const std::string_view path_view,
                       const DiskInterface& disk_interface,
                       const int output_count, char** outputs,
                       std::string* const err) {
   METRIC_RECORD(".ninja_log restat");
 
   Close();
-  std::string temp_path = path.AsString() + ".restat";
+  // TODO(colefaust): Make path a string from the beginning
+  std::string path{path_view};
+  std::string temp_path = path + ".restat";
   FILE* f = fopen(temp_path.c_str(), "wb");
   if (!f) {
     *err = strerror(errno);
@@ -480,12 +482,12 @@ bool BuildLog::Restat(const StringPiece path,
   }
 
   fclose(f);
-  if (unlink(path.str_) < 0) {
+  if (unlink(path.c_str()) < 0) {
     *err = strerror(errno);
     return false;
   }
 
-  if (rename(temp_path.c_str(), path.str_) < 0) {
+  if (rename(temp_path.c_str(), path.c_str()) < 0) {
     *err = strerror(errno);
     return false;
   }

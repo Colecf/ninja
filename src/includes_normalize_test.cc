@@ -29,8 +29,8 @@ namespace {
 string GetCurDir() {
   char buf[_MAX_PATH];
   _getcwd(buf, sizeof(buf));
-  vector<StringPiece> parts = SplitStringPiece(buf, '\\');
-  return parts[parts.size() - 1].AsString();
+  vector<std::string_view> parts = SplitStringView(buf, '\\');
+  return string(parts.back());
 }
 
 string NormalizeAndCheckNoError(const string& input) {
