@@ -17,7 +17,7 @@
 
 #include <algorithm>
 #include <string.h>
-#include "string_piece.h"
+#include <string_view>
 #include "util.h"
 
 // MurmurHash2, by Austin Appleby
@@ -55,25 +55,13 @@ unsigned int MurmurHash2(const void* key, size_t len) {
 
 #include <unordered_map>
 
-namespace std {
-template<>
-struct hash<StringPiece> {
-  typedef StringPiece argument_type;
-  typedef size_t result_type;
-
-  size_t operator()(StringPiece key) const {
-    return MurmurHash2(key.str_, key.len_);
-  }
-};
-}
-
-/// A template for hash_maps keyed by a StringPiece whose string is
+/// A template for hash_maps keyed by a std::string_view whose string is
 /// owned externally (typically by the values).  Use like:
 /// ExternalStringHash<Foo*>::Type foos; to make foos into a hash
-/// mapping StringPiece => Foo*.
+/// mapping std::string_view => Foo*.
 template<typename V>
 struct ExternalStringHashMap {
-  typedef std::unordered_map<StringPiece, V> Type;
+  typedef std::unordered_map<std::string_view, V> Type;
 };
 
 #endif // NINJA_MAP_H_

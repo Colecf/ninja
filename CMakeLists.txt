@@ -54,6 +54,7 @@ else()
 	add_library(libninja-re2c OBJECT src/depfile_parser.cc src/lexer.cc)
 endif()
 target_include_directories(libninja-re2c PRIVATE src)
+target_compile_features(libninja-re2c PUBLIC cxx_std_17)
 
 # --- Check for 'browse' mode support
 function(check_platform_supports_browse_mode RESULT)
@@ -150,7 +151,7 @@ else()
 	endif()
 endif()
 
-target_compile_features(libninja PUBLIC cxx_std_11)
+target_compile_features(libninja PUBLIC cxx_std_17)
 
 #Fixes GetActiveProcessorCount on MinGW
 if(MINGW)

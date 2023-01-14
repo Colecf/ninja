@@ -14,7 +14,6 @@
 
 #include "includes_normalize.h"
 
-#include "string_piece.h"
 #include "string_piece_util.h"
 #include "util.h"
 
@@ -28,12 +27,12 @@ using namespace std;
 
 namespace {
 
-bool InternalGetFullPathName(const StringPiece& file_name, char* buffer,
+bool InternalGetFullPathName(const std::string_view& file_name, char* buffer,
                              size_t buffer_length, string *err) {
-  DWORD result_size = GetFullPathNameA(file_name.AsString().c_str(),
+  DWORD result_size = GetFullPathNameA(string(file_name).c_str(),
                                        buffer_length, buffer, NULL);
   if (result_size == 0) {
-    *err = "GetFullPathNameA(" + file_name.AsString() + "): " +
+    *err = "GetFullPathNameA(" + string(file_name) + "): " +
         GetLastErrorString();
     return false;
   } else if (result_size > buffer_length) {
@@ -50,7 +49,7 @@ bool IsPathSeparator(char c) {
 // Return true if paths a and b are on the same windows drive.
 // Return false if this function cannot check
 // whether or not on the same windows drive.
-bool SameDriveFast(StringPiece a, StringPiece b) {
+bool SameDriveFast(std::string_view a, std::string_view b) {
   if (a.size() < 3 || b.size() < 3) {
     return false;
   }
@@ -71,7 +70,7 @@ bool SameDriveFast(StringPiece a, StringPiece b) {
 }
 
 // Return true if paths a and b are on the same Windows drive.
-bool SameDrive(StringPiece a, StringPiece b, string* err)  {
+bool SameDrive(std::string_view a, std::string_view b, string* err)  {
   if (SameDriveFast(a, b)) {
     return true;
   }
@@ -94,7 +93,7 @@ bool SameDrive(StringPiece a, StringPiece b, string* err)  {
 // Check path |s| is FullPath style returned by GetFullPathName.
 // This ignores difference of path separator.
 // This is used not to call very slow GetFullPathName API.
-bool IsFullPathName(StringPiece s) {
+bool IsFullPathName(std::string_view s) {
   if (s.size() < 3 ||
       !islatinalpha(s[0]) ||
       s[1] != ':' ||
@@ -132,12 +131,12 @@ IncludesNormalize::IncludesNormalize(const string& relative_to) {
   if (!err.empty()) {
     Fatal("Initializing IncludesNormalize(): %s", err.c_str());
   }
-  split_relative_to_ = SplitStringPiece(relative_to_, '/');
+  split_relative_to_ = SplitStringView(relative_to_, '/');
 }
 
-string IncludesNormalize::AbsPath(StringPiece s, string* err) {
+string IncludesNormalize::AbsPath(std::string_view s, string* err) {
   if (IsFullPathName(s)) {
-    string result = s.AsString();
+    string result = string(s);
     for (size_t i = 0; i < result.size(); ++i) {
       if (result[i] == '\\') {
         result[i] = '/';
@@ -157,11 +156,11 @@ string IncludesNormalize::AbsPath(StringPiece s, string* err) {
 }
 
 string IncludesNormalize::Relativize(
-    StringPiece path, const vector<StringPiece>& start_list, string* err) {
+    std::string_view path, const vector<std::string_view>& start_list, string* err) {
   string abs_path = AbsPath(path, err);
   if (!err->empty())
     return "";
-  vector<StringPiece> path_list = SplitStringPiece(abs_path, '/');
+  vector<std::string_view> path_list = SplitStringView(abs_path, '/');
   int i;
   for (i = 0; i < static_cast<int>(min(start_list.size(), path_list.size()));
        ++i) {
@@ -170,7 +169,7 @@ string IncludesNormalize::Relativize(
     }
   }
 
-  vector<StringPiece> rel_list;
+  vector<std::string_view> rel_list;
   rel_list.reserve(start_list.size() - i + path_list.size() - i);
   for (int j = 0; j < static_cast<int>(start_list.size() - i); ++j)
     rel_list.push_back("..");
@@ -178,7 +177,7 @@ string IncludesNormalize::Relativize(
     rel_list.push_back(path_list[j]);
   if (rel_list.size() == 0)
     return ".";
-  return JoinStringPiece(rel_list, '/');
+  return JoinStringView(rel_list, '/');
 }
 
 bool IncludesNormalize::Normalize(const string& input,
@@ -192,7 +191,7 @@ bool IncludesNormalize::Normalize(const string& input,
   strncpy(copy, input.c_str(), input.size() + 1);
   uint64_t slash_bits;
   CanonicalizePath(copy, &len, &slash_bits);
-  StringPiece partially_fixed(copy, len);
+  std::string_view partially_fixed(copy, len);
   string abs_input = AbsPath(partially_fixed, err);
   if (!err->empty())
     return false;
@@ -200,7 +199,7 @@ bool IncludesNormalize::Normalize(const string& input,
   if (!SameDrive(abs_input, relative_to_, err)) {
     if (!err->empty())
       return false;
-    *result = partially_fixed.AsString();
+    *result = string(partially_fixed);
     return true;
   }
   *result = Relativize(abs_input, split_relative_to_, err);
